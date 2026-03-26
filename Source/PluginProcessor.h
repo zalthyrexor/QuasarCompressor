@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "zlth_dsp_compressor.h"
 
 class QuasarCompressorAudioProcessor  : public juce::AudioProcessor
 {
@@ -27,5 +28,11 @@ public:
     void changeProgramName (int index, const juce::String& newName) override;
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    float getLatestGR() const { return latestGR.load(); }
+    juce::AudioProcessorValueTreeState apvts;
 private:
+    std::atomic<float> latestGR {1.0f};
+    std::vector<zlth::dsp::compressor::Compressor> compressors;
+
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 };

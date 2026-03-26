@@ -10,7 +10,7 @@ QuasarCompressorAudioProcessor::QuasarCompressorAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ), apvts(*this, nullptr, "Parameters", createParameterLayout())
 #endif
 {
 }
@@ -69,6 +69,13 @@ void QuasarCompressorAudioProcessor::changeProgramName (int index, const juce::S
 }
 void QuasarCompressorAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    auto totalNumInputChannels = getTotalNumInputChannels();
+    compressors.resize(totalNumInputChannels);
+    for (auto& comp : compressors)
+    {
+        comp.prepare(sampleRate);
+        comp.setParameters(-30.0f, 2.0, 1.0f, 1.0f);
+    }
 }
 void QuasarCompressorAudioProcessor::releaseResources()
 {
@@ -91,17 +98,35 @@ bool QuasarCompressorAudioProcessor::isBusesLayoutSupported (const BusesLayout& 
   #endif
 }
 #endif
-void QuasarCompressorAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void QuasarCompressorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    float thresh = apvts.getRawParameterValue("threshold")->load();
+    float ratio = apvts.getRawParameterValue("ratio")->load();
+    float p = apvts.getRawParameterValue("pGain")->load();
+    float i = apvts.getRawParameterValue("iGain")->load();
+    float d = apvts.getRawParameterValue("dGain")->load();
+
+    for (auto& comp : compressors) {
+        comp.setParameters(thresh, ratio, p, i);
+    }
+
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
+    auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+        buffer.clear(i, 0, buffer.getNumSamples());
+    float minGain = 1.0f;
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);
+        auto* channelData = buffer.getWritePointer(channel);
+        auto& comp = compressors[channel];
+        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+        {
+            channelData[sample] = comp.processSample(channelData[sample]);
+            minGain = comp.getGainReduction();
+        }
     }
+    latestGR.store(minGain);
 }
 bool QuasarCompressorAudioProcessor::hasEditor() const
 {
@@ -120,4 +145,14 @@ void QuasarCompressorAudioProcessor::setStateInformation (const void* data, int 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new QuasarCompressorAudioProcessor();
+}
+juce::AudioProcessorValueTreeState::ParameterLayout QuasarCompressorAudioProcessor::createParameterLayout()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+    layout.add(std::make_unique<juce::AudioParameterFloat>("threshold", "Threshold", -60.0f, 0.0f, -30.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("ratio", "Ratio", 1.0f, 20.0f, 2.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("pGain", "P Gain", 0.0f, 2000.0f, 500.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("iGain", "I Gain", 0.0f, 10.0f, 0.1f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>("dGain", "D Gain", 0.0f, 200.0f, 40.0f));
+    return layout;
 }

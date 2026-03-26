@@ -3,10 +3,14 @@
 <JUCERPROJECT id="EdJfZ2" name="Quasar Compressor" projectType="audioplug"
               useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1"
               companyName="Zalthyrexor" companyCopyright="Copyright (c) 2026 Zalthyrexor"
-              pluginFormats="buildStandalone" pluginManufacturerCode="Zlth"
-              pluginVST3Category="Dynamics" cppLanguageStandard="20">
+              pluginManufacturerCode="Zlth" pluginVST3Category="Dynamics" cppLanguageStandard="20"
+              pluginFormats="buildStandalone">
   <MAINGROUP id="istsFc" name="Quasar Compressor">
     <GROUP id="{0799CF52-E146-6334-4806-3BDF17E81594}" name="Source">
+      <GROUP id="{ED2AA7D7-9231-6BB4-2D88-AC36CC33BB93}" name="zlth">
+        <FILE id="mHdGmP" name="zlth_dsp_compressor.h" compile="0" resource="0"
+              file="Source/zlth_dsp_compressor.h"/>
+      </GROUP>
       <FILE id="ZT27r0" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="IMlzYq" name="PluginProcessor.h" compile="0" resource="0"
